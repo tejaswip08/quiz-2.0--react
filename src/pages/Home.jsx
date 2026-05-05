@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import backgroundImage from "../assets/bg-4.jpg";
+import React, { useState, useEffect, useRef } from "react";
 
 // Router
 import { useNavigate } from "react-router-dom";
@@ -8,16 +7,33 @@ import { useNavigate } from "react-router-dom";
 import Card from "@mui/material/Card";
 import TextField from "@mui/material/TextField";
 
+// RHF
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as yup from "yup";
+
 // Images
 import avatar1 from "../assets/avatar-1.png";
 import avatar2 from "../assets/avatar-2.png";
 import avatar3 from "../assets/avatar-3.png";
 import avatar4 from "../assets/avatar-4.png";
 
-// Main Component
+// Components
+import MySnackbar from "../components/common/MySnackbar";
+
+// ── Validation Schema ──────────────────────────────────────────────────────────
+const formsSchema = yup.object({
+  name: yup.string().required("Name is required!"),
+  email: yup
+    .string()
+    .email("Provided email is invalid!")
+    .required("Email is required!"),
+});
+
+// ── Main Component ─────────────────────────────────────────────────────────────
 const Home = () => {
   let windowContent;
-
+  const storage = useRef(undefined);
   const avatarImageArray = [
     { name: "avatar-1", path: avatar1 },
     { name: "avatar-2", path: avatar2 },
@@ -25,45 +41,139 @@ const Home = () => {
     { name: "avatar-4", path: avatar4 },
   ];
 
-  // Router (For Navigation)
+  // RHF
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({ resolver: yupResolver(formsSchema), mode: "onTouched" });
+
+  // ── Form submit — saves name & email into state then moves to window 2 ──
+  function formData(data) {
+    setState((prevState) => ({
+      ...prevState,
+      window: 2,
+      userDetails: {
+        ...prevState.userDetails,
+        name: data.name,
+        email: data.email,
+      },
+    }));
+  }
+
+  // Use Effect
+  useEffect(() => {
+    storage.current = JSON.parse(localStorage.getItem("USER_DETAILS"));
+    console.log("LOCA_ST_ITEMS", storage.current);
+  }, []);
+
+  // Router
   const navigate = useNavigate();
   function navigateToQuizPageMethod() {
+    const existingUsers =
+      JSON.parse(localStorage.getItem("USER_DETAILS")) || [];
+    const userExists = existingUsers.some(
+      (item) => item.email === state.userDetails.email,
+    );
+    if (!userExists) {
+      const updatedUsers = [...existingUsers, state.userDetails];
+      localStorage.setItem("USER_DETAILS", JSON.stringify(updatedUsers));
+    }
     navigate("/quiz-attempt");
   }
 
-  // Hooks Logics Here
-  const [state, setState] = useState({ window: 1 });
+  // Use State
+  const [state, setState] = useState({
+    window: 1,
+    userDetails: {
+      name: "",
+      email: "",
+      avatar: null,
+    },
+    snackbarDetails: {
+      color: null,
+      enabled: false,
+      message: null,
+    },
+  });
 
   function toggleWindowMethod(window) {
+    if (window == 3) {
+      if (state.userDetails.avatar) {
+      } else {
+        setState((prevState) => ({
+          ...prevState,
+          snackbarDetails: {
+            color: "error",
+            enabled: true,
+            message: "Kindly select your avatar..!",
+          },
+        }));
+        return;
+      }
+    }
     setState((prevState) => ({ ...prevState, window: window }));
   }
 
-  function callAvatarMethod() {
-    alert("AVATAR_TRIGGERING");
+  function callAvatarMethod(imageItem) {
+    setState((prevState) => ({
+      ...prevState,
+      userDetails: {
+        ...prevState.userDetails,
+        avatar: imageItem,
+      },
+    }));
   }
 
   switch (state.window) {
     case 1:
       windowContent = (
-        <div>
+        // ── handleSubmit wraps the form, Next button submits it ──
+        <form onSubmit={handleSubmit(formData)}>
           <span className="quiz-emoji">👋</span>
           <div className="quiz-title">Welcome Back!</div>
           <div className="quiz-subtitle">
-            Fill in your details to start the quiz
+            Please provide your details to register and start the quiz
           </div>
-
           <div className="quiz-field">
-            <TextField label="Name" variant="outlined" fullWidth />
+            <TextField
+              {...register("name")}
+              label="Name"
+              variant="outlined"
+              fullWidth
+              error={!!errors.name}
+            />
+            {errors.name && (
+              <p className="error-message">{errors.name.message}</p>
+            )}
           </div>
-
           <div className="quiz-field">
-            <TextField label="Email" variant="outlined" fullWidth />
+            <TextField
+              {...register("email")}
+              label="Email"
+              variant="outlined"
+              fullWidth
+              error={!!errors.email}
+            />
+            {errors.email && (
+              <p className="error-message">{errors.email.message}</p>
+            )}
           </div>
 
-          <button className="quiz-btn" onClick={() => toggleWindowMethod(2)}>
+          {/* type="submit" so handleSubmit fires and validates before proceeding */}
+          <button type="submit" className="quiz-btn">
             Next →
           </button>
-        </div>
+          <div className="quiz-or-divider">
+            <span>OR</span>
+          </div>
+          <button
+            className="quiz-btn quiz-btn-secondary"
+            onClick={() => toggleWindowMethod(4)}
+          >
+            I already have an account
+          </button>
+        </form>
       );
       break;
 
@@ -79,8 +189,12 @@ const Home = () => {
             {avatarImageArray.map((imageItem, index) => (
               <div
                 key={index}
-                className="quiz-avatar-item"
-                onClick={callAvatarMethod}
+                className={
+                  state.userDetails.avatar?.name === imageItem.name
+                    ? "quiz-avatar-selected-item quiz-avatar-item"
+                    : "quiz-avatar-item"
+                }
+                onClick={() => callAvatarMethod(imageItem)}
               >
                 <img src={imageItem.path} alt={`avatar-${index}`} />
               </div>
@@ -100,6 +214,7 @@ const Home = () => {
         </div>
       );
       break;
+
     case 3:
       windowContent = (
         <div>
@@ -162,11 +277,57 @@ const Home = () => {
         </div>
       );
       break;
+
+    case 4:
+      const savedAccounts = storage.current;
+
+      windowContent = (
+        <div>
+          <p className="quiz-avatar-title">Welcome Back 👋</p>
+          <p className="quiz-avatar-sub">Select your account to continue</p>
+
+          <div className="quiz-account-list">
+            {savedAccounts.map((user, index) => (
+              <div key={index} className="quiz-account-item">
+                <div className="quiz-account-avatar">
+                  <img src={user.avatar.path} alt={user.avatar.name} />
+                </div>
+                <div className="quiz-account-info">
+                  <div className="quiz-account-name">{user.name}</div>
+                  <div className="quiz-account-email">{user.email}</div>
+                </div>
+                <div className="quiz-account-arrow">→</div>
+              </div>
+            ))}
+          </div>
+          <button
+            className="quiz-btn quiz-btn-secondary"
+            onClick={() => toggleWindowMethod(1)}
+          >
+            ← Back
+          </button>
+        </div>
+      );
+      break;
   }
 
   return (
     <>
       <div className="quiz-root">
+        {state.snackbarDetails.enabled && (
+          <MySnackbar
+            SnackbarDetails={state.snackbarDetails}
+            handleClose={() =>
+              setState((prev) => ({
+                ...prev,
+                snackbarDetails: {
+                  ...prev.snackbarDetails,
+                  enabled: false,
+                },
+              }))
+            }
+          />
+        )}
         <Card className="quiz-card" variant="outlined">
           <div className="quiz-logo">
             <div className="quiz-logo-icon">
@@ -182,11 +343,13 @@ const Home = () => {
             </div>
           </div>
 
-          {windowContent}
+          <div key={state.window} className="quiz-window">
+            {windowContent}
+          </div>
         </Card>
-        <p className="quiz-copyright">
+        {/* <p className="quiz-copyright">
           © {new Date().getFullYear()} Tejaswi Sagar. All rights reserved.
-        </p>
+        </p> */}
       </div>
     </>
   );
