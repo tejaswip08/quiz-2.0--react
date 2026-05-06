@@ -20,6 +20,7 @@ import avatar4 from "../assets/avatar-4.png";
 
 // Components
 import MySnackbar from "../components/common/MySnackbar";
+import WelcomeAnimation from "../pages/WelcomeAnimation";
 
 // ── Validation Schema ──────────────────────────────────────────────────────────
 const formsSchema = yup.object({
@@ -63,8 +64,8 @@ const Home = () => {
 
   // Use Effect
   useEffect(() => {
+    // localStorage.removeItem("USER_DETAILS");
     storage.current = JSON.parse(localStorage.getItem("USER_DETAILS"));
-    console.log("LOCA_ST_ITEMS", storage.current);
   }, []);
 
   // Router
@@ -75,11 +76,24 @@ const Home = () => {
     const userExists = existingUsers.some(
       (item) => item.email === state.userDetails.email,
     );
-    if (!userExists) {
-      const updatedUsers = [...existingUsers, state.userDetails];
-      localStorage.setItem("USER_DETAILS", JSON.stringify(updatedUsers));
+    if (userExists) {
+      setState((prevState) => ({
+        ...prevState,
+        snackbarDetails: {
+          color: "error",
+          enabled: true,
+          message: "User already exists..!",
+        },
+      }));
+      return;
+    } else {
+      setState((prevState) => ({
+        ...prevState,
+        window: 5,
+      }));
     }
-    navigate("/quiz-attempt");
+    const updatedUsers = [...existingUsers, state.userDetails];
+    localStorage.setItem("USER_DETAILS", JSON.stringify(updatedUsers));
   }
 
   // Use State
@@ -164,15 +178,21 @@ const Home = () => {
           <button type="submit" className="quiz-btn">
             Next →
           </button>
-          <div className="quiz-or-divider">
-            <span>OR</span>
+          <div>
+            {storage.current && storage.current.length > 0 ? (
+              <div>
+                <div className="quiz-or-divider">
+                  <span>OR</span>
+                </div>
+                <button
+                  className="quiz-btn quiz-btn-secondary"
+                  onClick={() => toggleWindowMethod(4)}
+                >
+                  I already have an account
+                </button>
+              </div>
+            ) : undefined}
           </div>
-          <button
-            className="quiz-btn quiz-btn-secondary"
-            onClick={() => toggleWindowMethod(4)}
-          >
-            I already have an account
-          </button>
         </form>
       );
       break;
@@ -280,7 +300,6 @@ const Home = () => {
 
     case 4:
       const savedAccounts = storage.current;
-
       windowContent = (
         <div>
           <p className="quiz-avatar-title">Welcome Back 👋</p>
@@ -288,7 +307,14 @@ const Home = () => {
 
           <div className="quiz-account-list">
             {savedAccounts.map((user, index) => (
-              <div key={index} className="quiz-account-item">
+              <div
+                style={{ marginBottom: "5px" }}
+                key={index}
+                className="quiz-account-item"
+                onClick={() => {
+                  navigate(`/dashboard/${user.name}`, { state: user });
+                }}
+              >
                 <div className="quiz-account-avatar">
                   <img src={user.avatar.path} alt={user.avatar.name} />
                 </div>
@@ -307,6 +333,11 @@ const Home = () => {
             ← Back
           </button>
         </div>
+      );
+      break;
+    case 5:
+      windowContent = (
+        <WelcomeAnimation CurrentUserDetails={state.userDetails} />
       );
       break;
   }
@@ -329,19 +360,21 @@ const Home = () => {
           />
         )}
         <Card className="quiz-card" variant="outlined">
-          <div className="quiz-logo">
-            <div className="quiz-logo-icon">
-              <div className="quiz-logo-q">Q</div>
-              <div className="quiz-logo-spark">
-                <span></span>
-                <span></span>
-                <span></span>
+          {state.window < 5 ? (
+            <div className="quiz-logo">
+              <div className="quiz-logo-icon">
+                <div className="quiz-logo-q">Q</div>
+                <div className="quiz-logo-spark">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+              <div className="quiz-logo-text">
+                quiz<span>it</span>
               </div>
             </div>
-            <div className="quiz-logo-text">
-              quiz<span>it</span>
-            </div>
-          </div>
+          ) : null}
 
           <div key={state.window} className="quiz-window">
             {windowContent}
