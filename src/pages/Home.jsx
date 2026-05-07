@@ -102,6 +102,9 @@ const Home = () => {
     userDetails: {
       name: "",
       email: "",
+      gamesPlayed: 0,
+      highestScore: 0,
+      correctAnswers: 0,
       avatar: null,
     },
     snackbarDetails: {

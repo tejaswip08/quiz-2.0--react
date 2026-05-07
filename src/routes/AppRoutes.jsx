@@ -3,7 +3,8 @@ import { Routes, Route } from "react-router-dom";
 
 import Home from "../pages/Home";
 import Dashboard from "../pages/Dashboard";
-// import Quiz from "../pages/Quiz";
+import Quiz from "../pages/Quiz";
+import Leaderboard from "../pages/Leaderboard";
 
 const AppRoutes = () => {
   return (
@@ -11,6 +12,8 @@ const AppRoutes = () => {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/dashboard/:data" element={<Dashboard />} />
+        <Route path="/quiz-attempt" element={<Quiz />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
       </Routes>
     </>
   );
